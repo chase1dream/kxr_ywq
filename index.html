@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我们的回忆-康晓睿&杨雯琪</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="home-page">
+    <div class="particles" id="particles"></div>
+
+    <div class="home-container">
+        <div class="home-content">
+            <div class="home-header">
+                <h1 class="home-title">我们的回忆</h1>
+                <p class="home-subtitle">Our Beautiful Memories</p>
+                <div class="home-divider">
+                    <span class="divider-line"></span>
+                    <span class="divider-icon">♥</span>
+                    <span class="divider-line"></span>
+                </div>
+            </div>
+            
+            <div class="album-cards">
+                <!-- 婚纱照 -->
+                <div class="album-card" onclick="openViewer('images', 'images_thumb', '婚纱照')">
+                    <div class="album-card-bg" style="background-image: url('./images_thumb/1.webp')">
+                        <div class="album-card-overlay"></div>
+                    </div>
+                    <div class="album-card-content">
+                        <h2 class="album-title">婚纱照（2026.5.14）</h2>
+                        <p class="album-desc">Wedding Photos</p>
+                        <div class="album-count" id="weddingCount">加载中...</div>
+                        <button class="album-btn">
+                            <span>查看相册</span>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M5 12h14M12 5l7 7-7 7"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 订婚照 -->
+                <div class="album-card" onclick="openViewer('images1', 'images1_thumb', '订婚照')">
+                    <div class="album-card-bg" style="background-image: url('./images1_thumb/37.webp')">
+                        <div class="album-card-overlay"></div>
+                    </div>
+                    <div class="album-card-content">
+                        <h2 class="album-title">订婚照（丙午年正月初八&2026.2.24）</h2>
+                        <p class="album-desc">Engagement Photos</p>
+                        <div class="album-count" id="engagementCount">加载中...</div>
+                        <button class="album-btn">
+                            <span>查看相册</span>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M5 12h14M12 5l7 7-7 7"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="home-footer">
+                <p>💕 Forever Love 💕</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 背景粒子效果
+        function createParticles() {
+            const container = document.getElementById('particles');
+            const colors = ['#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff', '#ff6b9d'];
+            
+            for (let i = 0; i < 50; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.top = Math.random() * 100 + '%';
+                particle.style.width = Math.random() * 4 + 2 + 'px';
+                particle.style.height = particle.style.width;
+                particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                particle.style.animationDelay = Math.random() * 5 + 's';
+                particle.style.animationDuration = Math.random() * 5 + 5 + 's';
+                container.appendChild(particle);
+            }
+        }
+
+        async function getImageCount(folder) {
+            try {
+                const response = await fetch(`./${folder}/`);
+                if (response.ok) {
+                    const text = await response.text();
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(text, 'text/html');
+                    const links = doc.querySelectorAll('a');
+                    let count = 0;
+                    const exts = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'];
+                    links.forEach(link => {
+                        const href = link.getAttribute('href') || '';
+                        const lower = href.toLowerCase();
+                        if (exts.some(e => lower.endsWith('.' + e))) count++;
+                    });
+                    return count;
+                }
+            } catch(e) {}
+            return '?';
+        }
+
+        function openViewer(imageFolder, thumbFolder, title) {
+            window.location.href = `viewer.html?imageFolder=${imageFolder}&thumbFolder=${thumbFolder}&title=${encodeURIComponent(title)}`;
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', async () => {
+            createParticles();
+            
+            const weddingCount = await getImageCount('images_thumb');
+            const engagementCount = await getImageCount('images1_thumb');
+            
+            document.getElementById('weddingCount').textContent = weddingCount + ' 张照片';
+            document.getElementById('engagementCount').textContent = engagementCount + ' 张照片';
+        });
+    </script>
+</body>
+</html>
