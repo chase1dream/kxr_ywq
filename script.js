@@ -263,8 +263,23 @@ class ImageViewer {
         // 更新进度条
         this.updateProgress(100);
     }
-
     async loadFromDirectory(folder) {
+        // 先尝试读取列表文件
+        const listFile = folder.replace(/\/$/, '') + '_list.json';
+        
+        try {
+            const response = await fetch('./' + listFile);
+            if (response.ok) {
+                const fileList = await response.json();
+                console.log(`✅ 从 ${listFile} 加载了 ${fileList.length} 张图片`);
+                const images = fileList.map(f => `./${folder}/${f}`);
+                return this.sortImages(images);
+            }
+        } catch(e) {
+            console.log('列表文件读取失败，尝试目录扫描...');
+        }
+
+        // 备用：尝试目录扫描（本地服务器可用）
         try {
             const response = await fetch(`./${folder}/`);
             if (!response.ok) return [];
@@ -291,6 +306,7 @@ class ImageViewer {
 
             return this.sortImages(images);
         } catch(e) {
+            console.log('目录扫描失败:', e.message);
             return [];
         }
     }
