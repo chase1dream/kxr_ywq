@@ -22,14 +22,32 @@
             </div>
             
             <div class="album-cards">
+                <!-- 结婚照 -->
+                <div class="album-card" onclick="openViewer('images2', 'images2_thumb', '结婚照')">
+                    <div class="album-card-bg" style="background-image: url('./images2/BV7A6138.jpg')">
+                        <div class="album-card-overlay"></div>
+                    </div>
+                    <div class="album-card-content">
+                        <h2 class="album-title">结婚照（2026.7.19）</h2>
+                        <p class="album-desc">Wedding Photos</p>
+                        <div class="album-count" id="weddingCount2">加载中...</div>
+                        <button class="album-btn">
+                            <span>查看相册</span>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M5 12h14M12 5l7 7-7 7"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
                 <!-- 婚纱照 -->
                 <div class="album-card" onclick="openViewer('images', 'images_thumb', '婚纱照')">
-                    <div class="album-card-bg" style="background-image: url('./images_thumb/1.webp')">
+                    <div class="album-card-bg" style="background-image: url('./images/1.webp')">
                         <div class="album-card-overlay"></div>
                     </div>
                     <div class="album-card-content">
                         <h2 class="album-title">婚纱照（2026.5.14）</h2>
-                        <p class="album-desc">Wedding Photos</p>
+                        <p class="album-desc">Wedding Dress Photos</p>
                         <div class="album-count" id="weddingCount">加载中...</div>
                         <button class="album-btn">
                             <span>查看相册</span>
@@ -42,7 +60,7 @@
 
                 <!-- 订婚照 -->
                 <div class="album-card" onclick="openViewer('images1', 'images1_thumb', '订婚照')">
-                    <div class="album-card-bg" style="background-image: url('./images1_thumb/37.webp')">
+                    <div class="album-card-bg" style="background-image: url('./images1/37.webp')">
                         <div class="album-card-overlay"></div>
                     </div>
                     <div class="album-card-content">
@@ -111,6 +129,7 @@
                     const counts = await response.json();
                     if (folder === 'images_thumb') return counts.wedding || '?';
                     if (folder === 'images1_thumb') return counts.engagement || '?';
+                    if (folder === 'images2_thumb') return counts.wedding2 || '?';
                 }
             } catch(e) {}
             
@@ -146,9 +165,11 @@
             
             const weddingCount = await getImageCount('images_thumb');
             const engagementCount = await getImageCount('images1_thumb');
+            const weddingCount2 = await getImageCount('images2_thumb');
             
             document.getElementById('weddingCount').textContent = weddingCount + ' 张照片';
             document.getElementById('engagementCount').textContent = engagementCount + ' 张照片';
+            document.getElementById('weddingCount2').textContent = weddingCount2 + ' 张照片';
         });
     </script>
 </body>
