@@ -12,7 +12,6 @@ class MusicPlayer {
     }
 
     async init() {
-        // 扫描音乐文件夹
         await this.scanMusic();
         
         if (this.tracks.length > 0) {
@@ -23,7 +22,6 @@ class MusicPlayer {
     }
 
     async scanMusic() {
-        // 方法1：读取音乐列表JSON
         try {
             const response = await fetch('./music_list.json');
             if (response.ok) {
@@ -40,7 +38,6 @@ class MusicPlayer {
             console.log('音乐列表文件读取失败');
         }
         
-        // 方法2：尝试目录扫描（本地服务器）
         try {
             const response = await fetch('./music/');
             if (response.ok) {
@@ -65,7 +62,6 @@ class MusicPlayer {
             console.log('音乐目录扫描失败');
         }
         
-        // 方法3：使用默认列表（兜底）
         if (this.tracks.length === 0) {
             this.tracks = [];
             console.log('⚠️ 未找到音乐文件，音乐功能将不可用');
@@ -78,8 +74,10 @@ class MusicPlayer {
         if (index >= 0 && index < this.tracks.length) {
             this.currentTrack = index;
             this.audio.src = this.tracks[index].path;
-            document.getElementById('musicToggleBtn').querySelector('.music-icon').textContent = 
-                '🎵 ' + this.tracks[index].name.substring(0, 8);
+            const icon = document.getElementById('musicToggleBtn').querySelector('.music-icon');
+            if (icon) {
+                icon.textContent = '🎵 ' + this.tracks[index].name.substring(0, 8);
+            }
         }
     }
 
@@ -138,7 +136,6 @@ class MusicPlayer {
             this.setVolume(e.target.value);
         });
         
-        // 点击弹窗外部关闭
         document.getElementById('musicModal').addEventListener('click', (e) => {
             if (e.target === e.currentTarget) {
                 e.currentTarget.classList.remove('active');
@@ -172,7 +169,7 @@ class ImageViewer {
         this.lastTapTime = 0;
         this.longPressTimer = null;
         this.musicPlayer = null;
-        this.animationType = 'slide'; // slide, fade, zoom, flip
+        this.animationType = 'slide';
         this.animationTypes = ['slide', 'fade', 'zoom', 'flip'];
 
         this.getURLParams();
@@ -202,7 +199,6 @@ class ImageViewer {
     async init() {
         this.showLoading();
         
-        // 初始化音乐播放器
         this.musicPlayer = new MusicPlayer();
         
         await this.loadImages();
@@ -224,7 +220,6 @@ class ImageViewer {
             if (hint) hint.style.opacity = '0';
         }, 5000);
 
-        // 隐藏进度条
         setTimeout(() => {
             const progressBar = document.getElementById('progressBarContainer');
             if (progressBar) {
@@ -258,8 +253,9 @@ class ImageViewer {
         `;
     }
 
+    // ========== 核心修复：加载图片 ==========
     async loadImages() {
-        // 从缩略图文件夹加载所有图片（因为这些图片更小，保证能加载完）
+        // 1. 从缩略图文件夹加载所有缩略图
         const thumbImages = await this.loadFromDirectory(this.thumbFolder);
         
         if (thumbImages.length === 0) {
@@ -268,21 +264,41 @@ class ImageViewer {
             this.images = originalImages;
             this.thumbImages = originalImages;
         } else {
-            // 用缩略图路径推导原图路径
+            // 2. 保存缩略图路径
             this.thumbImages = thumbImages;
-            this.images = thumbImages.map(thumb => {
-                // 获取文件名
-                const fileName = thumb.split('/').pop();
-                return `./${this.imageFolder}/${fileName}`;
+            
+            // 3. 从缩略图路径推导原图路径（修复：正确替换文件夹名）
+            this.images = thumbImages.map(thumbPath => {
+                // 获取文件夹名称（去掉 ./ 前缀和末尾的 /）
+                let thumbFolderName = this.thumbFolder.replace(/^\.\//, '').replace(/\/$/, '');
+                let imageFolderName = this.imageFolder.replace(/^\.\//, '').replace(/\/$/, '');
+                
+                // 替换路径中的文件夹名
+                // 例如: ./images2_thumb/1.webp -> ./images2/1.webp
+                let fullPath = thumbPath.replace(thumbFolderName, imageFolderName);
+                
+                // 如果替换后路径没有变化，尝试用正则替换
+                if (fullPath === thumbPath) {
+                    // 使用正则替换：匹配文件夹名（包含下划线等）
+                    const regex = new RegExp(thumbFolderName.replace(/_/g, '[_]?'), 'g');
+                    fullPath = thumbPath.replace(regex, imageFolderName);
+                }
+                
+                return fullPath;
             });
+            
+            console.log('📁 缩略图文件夹:', this.thumbFolder);
+            console.log('📁 原图文件夹:', this.imageFolder);
+            console.log('🖼️ 缩略图路径示例:', this.thumbImages[0]);
+            console.log('🖼️ 原图路径示例:', this.images[0]);
         }
 
-        // 更新进度条
         this.updateProgress(100);
     }
+
     async loadFromDirectory(folder) {
-        // 先尝试读取列表文件
-        const listFile = folder.replace(/\/$/, '') + '_list.json';
+        // 方法1：读取列表JSON文件
+        const listFile = folder.replace(/^\.\//, '').replace(/\/$/, '') + '_list.json';
         
         try {
             const response = await fetch('./' + listFile);
@@ -296,7 +312,7 @@ class ImageViewer {
             console.log('列表文件读取失败，尝试目录扫描...');
         }
 
-        // 备用：尝试目录扫描（本地服务器可用）
+        // 方法2：目录扫描
         try {
             const response = await fetch(`./${folder}/`);
             if (!response.ok) return [];
@@ -357,6 +373,7 @@ class ImageViewer {
                 loaded++;
                 this.updateProgress(Math.round((loaded / total) * 100));
             };
+            // 预加载缩略图
             img.src = this.thumbImages[index] || src;
         });
     }
@@ -406,38 +423,41 @@ class ImageViewer {
             slide.className = 'slide';
             slide.setAttribute('data-index', index);
 
-            // 背景
             const bgDiv = document.createElement('div');
             bgDiv.className = 'slide-bg';
             bgDiv.style.backgroundImage = this.backgroundImage;
             slide.appendChild(bgDiv);
 
-            // 加载指示器
             const loadingDiv = document.createElement('div');
             loadingDiv.className = 'loading-indicator';
             loadingDiv.innerHTML = `<div class="spinner"></div>`;
             slide.appendChild(loadingDiv);
 
-            // 图片容器（用于缩放）
             const imgContainer = document.createElement('div');
             imgContainer.className = 'img-container';
             
             const img = document.createElement('img');
-            img.src = this.thumbImages[index] || src; // 先加载缩略图
+            // 先加载缩略图（小图）
+            img.src = this.thumbImages[index] || src;
             img.alt = `图片 ${index + 1}`;
-            img.setAttribute('data-full-src', src); // 保存原图路径
+            img.setAttribute('data-full-src', src);
             
             img.onload = () => {
                 img.classList.add('loaded');
                 loadingDiv.style.opacity = '0';
                 setTimeout(() => loadingDiv.remove(), 400);
                 
-                // 延迟加载原图
+                // 延迟加载原图（大图）
                 if (img.src !== src) {
                     setTimeout(() => {
                         const fullImg = new Image();
                         fullImg.onload = () => {
                             img.src = src;
+                            console.log(`✅ 加载原图: ${src}`);
+                        };
+                        fullImg.onerror = () => {
+                            // 如果原图加载失败，保持缩略图
+                            console.warn(`⚠️ 原图加载失败，使用缩略图: ${src}`);
                         };
                         fullImg.src = src;
                     }, 500);
@@ -455,10 +475,7 @@ class ImageViewer {
 
         slidesContainer.appendChild(slideFragment);
 
-        // 渲染缩略图
         this.renderThumbnails();
-        
-        // 渲染滑动指示器
         this.renderIndicators();
     }
 
@@ -474,6 +491,7 @@ class ImageViewer {
             thumb.setAttribute('data-index', index);
             
             const thumbImg = document.createElement('img');
+            // 缩略图使用缩略图路径
             thumbImg.src = this.thumbImages[index] || src;
             thumbImg.loading = 'lazy';
             
@@ -491,7 +509,6 @@ class ImageViewer {
         
         container.innerHTML = '';
         
-        // 如果图片太多，只显示部分指示器
         const maxDots = 20;
         const total = this.images.length;
         
@@ -504,7 +521,6 @@ class ImageViewer {
                 container.appendChild(dot);
             }
         } else {
-            // 显示简化的指示器
             const dot = document.createElement('div');
             dot.className = 'indicator-dot';
             container.appendChild(dot);
@@ -521,7 +537,6 @@ class ImageViewer {
 
     // ==================== 事件绑定 ====================
     bindEvents() {
-        // 返回按钮
         document.getElementById('backBtn').addEventListener('click', () => {
             window.location.href = 'index.html';
         });
@@ -532,7 +547,6 @@ class ImageViewer {
         document.getElementById('thumbnailClose').addEventListener('click', () => this.hideThumbnails());
         document.getElementById('autoPlayBtn').addEventListener('click', () => this.toggleAutoPlay());
 
-        // 键盘事件
         document.addEventListener('keydown', (e) => {
             switch(e.key) {
                 case 'ArrowLeft': e.preventDefault(); this.prevSlide(); break;
@@ -549,12 +563,10 @@ class ImageViewer {
 
         const viewer = document.getElementById('viewer');
 
-        // 触摸事件
         viewer.addEventListener('touchstart', (e) => this.handleTouchStart(e), { passive: false });
         viewer.addEventListener('touchmove', (e) => this.handleTouchMove(e), { passive: false });
         viewer.addEventListener('touchend', (e) => this.handleTouchEnd(e));
 
-        // 鼠标拖拽
         let isDragging = false, startX = 0, startY = 0;
         
         viewer.addEventListener('mousedown', (e) => {
@@ -564,7 +576,6 @@ class ImageViewer {
             startY = e.clientY;
             viewer.style.cursor = 'grabbing';
             
-            // 长按检测
             this.longPressTimer = setTimeout(() => this.showContextMenu(e), 800);
         });
 
@@ -591,7 +602,6 @@ class ImageViewer {
             }
         });
 
-        // 缩略图点击
         document.getElementById('thumbnailContainer')?.addEventListener('click', (e) => {
             const thumb = e.target.closest('.thumbnail');
             if (thumb) {
@@ -599,7 +609,6 @@ class ImageViewer {
             }
         });
 
-        // 滚轮事件
         viewer.addEventListener('wheel', (e) => {
             if (e.target.closest('.thumbnail-container') || e.target.closest('.music-modal')) return;
             if (e.ctrlKey) {
@@ -616,13 +625,11 @@ class ImageViewer {
             }
         }, { passive: false });
 
-        // 双击切换动画类型
         viewer.addEventListener('dblclick', (e) => {
             if (e.target.closest('button') || e.target.closest('.thumbnail')) return;
             this.cycleAnimation();
         });
 
-        // 窗口大小改变
         let resizeTimeout;
         window.addEventListener('resize', () => {
             clearTimeout(resizeTimeout);
@@ -632,12 +639,10 @@ class ImageViewer {
             }, 500);
         });
 
-        // 隐藏右键菜单
         document.addEventListener('click', () => {
             document.getElementById('contextMenu')?.classList.remove('active');
         });
 
-        // 长按菜单操作
         document.getElementById('contextMenu')?.addEventListener('click', (e) => {
             const action = e.target.closest('.context-menu-item')?.getAttribute('data-action');
             switch(action) {
@@ -657,7 +662,6 @@ class ImageViewer {
         this.touchStartY = e.touches[0].clientY;
         this.isSwiping = true;
         
-        // 双指缩放
         if (e.touches.length === 2) {
             this.initialPinchDistance = Math.hypot(
                 e.touches[0].clientX - e.touches[1].clientX,
@@ -665,7 +669,6 @@ class ImageViewer {
             );
         }
         
-        // 长按检测
         this.longPressTimer = setTimeout(() => this.showContextMenu(e.touches[0]), 800);
     }
 
@@ -675,7 +678,6 @@ class ImageViewer {
         this.touchEndX = e.touches[0].clientX;
         this.touchEndY = e.touches[0].clientY;
         
-        // 双指缩放
         if (e.touches.length === 2 && this.initialPinchDistance) {
             e.preventDefault();
             const currentDistance = Math.hypot(
@@ -695,7 +697,6 @@ class ImageViewer {
         this.isSwiping = false;
         this.initialPinchDistance = null;
         
-        // 双击检测
         const now = Date.now();
         if (now - this.lastTapTime < 300) {
             this.cycleAnimation();
@@ -713,11 +714,10 @@ class ImageViewer {
         }
     }
 
-    // ==================== 图片切换（带动画） ====================
+    // ==================== 图片切换 ====================
     goToSlide(index) {
         if (index < 0 || index >= this.images.length) return;
 
-        const oldIndex = this.currentIndex;
         this.currentIndex = index;
         
         const slidesContainer = document.getElementById('slidesContainer');
@@ -725,7 +725,6 @@ class ImageViewer {
         
         if (!slidesContainer || !currentSlide) return;
 
-        // 根据动画类型切换
         switch(this.animationType) {
             case 'fade':
                 this.fadeTransition(slidesContainer, currentSlide, index);
@@ -750,11 +749,9 @@ class ImageViewer {
     }
 
     fadeTransition(container, currentSlide, index) {
-        // 先快速滑动到位置
         container.style.transition = 'none';
         container.style.transform = `translateX(-${index * 100}%)`;
         
-        // 淡入效果
         const img = currentSlide.querySelector('img');
         if (img) {
             img.style.opacity = '0';
@@ -804,7 +801,6 @@ class ImageViewer {
         const nextIdx = (currentIdx + 1) % this.animationTypes.length;
         this.animationType = this.animationTypes[nextIdx];
         
-        // 短暂提示
         const names = { slide: '滑动', fade: '淡入', zoom: '缩放', flip: '翻转' };
         this.showToast('切换效果：' + names[this.animationType]);
     }
@@ -832,7 +828,6 @@ class ImageViewer {
         this.updateIndicators();
         this.updateThumbnails();
         
-        // 重置缩放
         this.scale = 1;
         this.applyScale();
     }
@@ -982,7 +977,6 @@ class ImageViewer {
     }
 
     showToast(message) {
-        // 移除旧toast
         document.querySelectorAll('.toast').forEach(t => t.remove());
         
         const toast = document.createElement('div');
@@ -1056,7 +1050,6 @@ document.addEventListener('gesturestart', (e) => e.preventDefault());
 document.addEventListener('gesturechange', (e) => e.preventDefault());
 document.addEventListener('gestureend', (e) => e.preventDefault());
 
-// 添加 toast 动画样式
 const toastStyle = document.createElement('style');
 toastStyle.textContent = `
     @keyframes toastIn {
