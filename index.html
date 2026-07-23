@@ -22,6 +22,24 @@
             </div>
             
             <div class="album-cards">
+                <!-- 结婚登记照 -->
+                <div class="album-card" onclick="openViewer('images3', 'images3_thumb', '结婚登记照')">
+                    <div class="album-card-bg" style="background-image: url('./images3/39.jpg')">
+                        <div class="album-card-overlay"></div>
+                    </div>
+                    <div class="album-card-content">
+                        <h2 class="album-title">结婚登记照（2026.7.22）</h2>
+                        <p class="album-desc">Marriage Registration Photos</p>
+                        <div class="album-count" id="marriageRegistrationCount">加载中...</div>
+                        <button class="album-btn">
+                            <span>查看相册</span>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M5 12h14M12 5l7 7-7 7"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
                 <!-- 结婚照 -->
                 <div class="album-card" onclick="openViewer('images2', 'images2_thumb', '结婚照')">
                     <div class="album-card-bg" style="background-image: url('./images2/BV7A6138.jpg')">
@@ -103,26 +121,7 @@
         }
 
         async function getImageCount(folder) {
-            // 方法1：读取列表JSON文件
-            try {
-                const response = await fetch(`./${folder}_list.json`);
-                if (response.ok) {
-                    const list = await response.json();
-                    return list.length;
-                }
-            } catch(e) {}
-            
-            // 方法2：读取计数文件
-            try {
-                const response = await fetch(`./${folder}_count.txt`);
-                if (response.ok) {
-                    const text = await response.text();
-                    const count = parseInt(text.trim());
-                    if (!isNaN(count)) return count;
-                }
-            } catch(e) {}
-            
-            // 方法3：读取综合计数JSON
+            // 读取综合计数JSON
             try {
                 const response = await fetch('./counts.json');
                 if (response.ok) {
@@ -130,28 +129,9 @@
                     if (folder === 'images_thumb') return counts.wedding || '?';
                     if (folder === 'images1_thumb') return counts.engagement || '?';
                     if (folder === 'images2_thumb') return counts.wedding2 || '?';
+                    if (folder === 'images3_thumb') return counts.album3 || '?';
                 }
             } catch(e) {}
-            
-            // 方法4：尝试目录扫描（本地服务器可用）
-            try {
-                const response = await fetch(`./${folder}/`);
-                if (response.ok) {
-                    const text = await response.text();
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(text, 'text/html');
-                    const links = doc.querySelectorAll('a');
-                    let count = 0;
-                    const exts = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'];
-                    links.forEach(link => {
-                        const href = link.getAttribute('href') || '';
-                        const lower = href.toLowerCase();
-                        if (exts.some(e => lower.endsWith('.' + e))) count++;
-                    });
-                    return count;
-                }
-            } catch(e) {}
-            
             return '?';
         }
 
@@ -166,10 +146,12 @@
             const weddingCount = await getImageCount('images_thumb');
             const engagementCount = await getImageCount('images1_thumb');
             const weddingCount2 = await getImageCount('images2_thumb');
+            const marriageRegistrationCount = await getImageCount('images3_thumb');
             
             document.getElementById('weddingCount').textContent = weddingCount + ' 张照片';
             document.getElementById('engagementCount').textContent = engagementCount + ' 张照片';
             document.getElementById('weddingCount2').textContent = weddingCount2 + ' 张照片';
+            document.getElementById('marriageRegistrationCount').textContent = marriageRegistrationCount + ' 张照片';
         });
     </script>
 </body>
